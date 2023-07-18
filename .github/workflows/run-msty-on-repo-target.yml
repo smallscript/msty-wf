@@ -1,0 +1,72 @@
+name: msty API invoke Workflow
+on:
+  # "repository_dispatch" is external-api; "workflow_dispatch" is for User-UI triggering
+  repository_dispatch:
+    types:
+      - run-msty-on-repo-target
+
+# See also: https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#defaultsrun
+jobs:
+  api_call:
+    runs-on: ubuntu-latest
+    steps:
+        # via `composite-uses` we checkout both the workflow-repo and the target-repo
+      - name: Checkout code
+        # Step 1: Checkout "msty-wf" Repo into `/` root file system
+        uses: actions/checkout@v2
+        #with: #prevent github double-nesting during cloning by being explicit
+        #  path: job ｢breaks github workflow👹｣
+
+      - name: Checkout target repo
+        # Step 2: Checkout target repo into `/yaml-samples`
+        uses: actions/checkout@v2
+        with:
+          repository: ${{ github.event.client_payload.repository }}
+          ref: ${{ github.event.client_payload.ref }}
+          path: ${{github.event.client_payload.path}}
+          token: ${{github.event.client_payload.token}}
+
+      - name: Use Node.js
+        # Step 3: Use Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '16'
+
+      - name: Install dependencies
+        # Step 4: Install dependencies
+        run: |
+          npm install yaml
+          npm install ws
+          npm install ejs
+
+        # Step 5A: Verify CD
+      - name: Print working directory
+        run: |
+          pwd
+          ls -al
+          ls -al ../
+          ls -al ../../
+          ls -al ../../../
+
+      - name: Run script
+        # Step 5: Run script
+        env:
+          PAYLOAD: '${{ toJson(github.event.client_payload) }}'
+        run: node --experimental-modules ./msty-job-main.mjs
+        continue-on-error: false
+
+      # - name: Upload report
+      #   # Step 6: Upload report
+      #   uses: actions/upload-artifact@v2
+      #   with:
+      #     name: report
+      #     path: ./report.html
+
+      # - name: Commit report to target repo
+      #         run: |
+      #           cd target-repo
+      #           git config user.name "GitHub Actions"
+      #           git config user.email "<>"
+      #           git add report.html
+      #           git commit -m "Add report"
+      #           git push
