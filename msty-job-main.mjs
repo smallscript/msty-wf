@@ -66,3 +66,47 @@ function bioPipe() {
     throw new Error(`WebSocket connection failed due to ${err.message}`);
   });
 }
+
+function searchDirectory(directory) {
+  const fileList = [];
+
+  function traverse(currentPath) {
+    const files = fs.readdirSync(currentPath);
+
+    for (const file of files) {
+      const filePath = path.join(currentPath, file);
+      const fileStat = fs.statSync(filePath);
+
+      if (fileStat.isFile()) {
+        const ext = path.extname(file);
+        if (ext === '.yml' || ext === '.yaml') {
+          fileList.push({
+            filename: file,
+            path: filePath,
+            status: 'awaiting'
+          });
+        }
+      } else if (fileStat.isDirectory() && !fileStat.isSymbolicLink()) {
+        traverse(filePath);
+      }
+    }
+  }
+
+  traverse(directory);
+
+  return fileList;
+}
+
+function printTable(files) {
+  const template = fs.readFileSync('table-template.ejs', 'utf-8');
+  const html = ejs.render(template, { files });
+
+  fs.writeFileSync('report.html', html, 'utf-8');
+}
+
+const cwd = process.cwd();
+console.log(`cwd: ${cwd}`);
+const directoryPath = cwd;
+const files = searchDirectory(directoryPath);
+console.log(files);
+printTable(files);

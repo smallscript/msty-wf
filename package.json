@@ -1,0 +1,24 @@
+{
+  "name": "msty-wf",
+  "version": "1.0.0",
+  "description": "",
+  "main": "msty-job-main.mjs",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/smallscript/msty-wf.git"
+  },
+  "author": "dsim@sm.st",
+  "license": "MPL-2.0",
+  "bugs": {
+    "url": "https://github.com/smallscript/msty-wf/issues"
+  },
+  "homepage": "https://github.com/smallscript/msty-wf#readme",
+  "dependencies": {
+    "ejs": "^3.1.9",
+    "ws": "^8.13.0",
+    "yaml": "^2.3.1"
+  }
+}
