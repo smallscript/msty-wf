@@ -1,112 +1,62 @@
-import fs from 'fs';
-import path from 'path';
-import yaml from 'yaml';
 import WebSocket from 'ws';
-import ejs from 'ejs';
+// globally pollute to expose WebSocket
+import μefkt    from './μefkt.core.mjs';
+import fs       from 'fs';
+import fs_path  from 'path';
+import { fileURLToPath } from 'url';
+// report writer
+import emitReport from './msty-report.mjs';
 
-const fallback = `{"msty_endpoint": "msty.sm.st"}`;
-const payload = JSON.parse(process?.env?.PAYLOAD || fallback);
-console.log('Payload:', payload);
-
-const url = payload.msty_endpoint;
-function bioPipe() {
-  let reportData = [];
-  const ws = new WebSocket(url);
-  ws.on('open', function open() {
-    const getFiles = function (dir, files_){
-      files_ = files_ || [];
-      const files = fs.readdirSync(dir);
-      for (const i in files){
-        const name = `${dir}/${files[i]}`;
-        if (fs.statSync(name).isDirectory()){
-          getFiles(name, files_);
-        } else {
-          files_.push(name);
-        }
+function eachYamlFsEntryDeepDo({path: rootPath, do: eachDo}) {
+  var result; function dirEachWalk(curPath) {
+    const dirEntries = fs.readdirSync(curPath);
+    for (const fnm of dirEntries) {
+      const fpn      = fs_path.join(curPath, fnm),
+            fpn_stat = fs.statSync(fpn);
+      if(fpn_stat.isSymbolicLink())
+        continue;
+      else if (fpn_stat.isDirectory())
+        dirEachWalk(fpn);
+      else if (fpn_stat.isFile()) {
+        const ext = fs_path.extname(fnm);
+        if (ext === '.yml' || ext === '.yaml')
+          result = eachDo({
+            name        : fnm,
+            path        : fpn,
+            size        : fpn_stat.size,
+            etCreated   : fpn_stat.birthtime.getTime(),
+            etModified  : fpn_stat.mtime.getTime(),
+            data        : fs.readFileSync(fpn,{encoding:'utf-8'}),
+        });
       }
-      return files_;
     }
-
-    const yamlFiles = getFiles('.').filter(fn => path.extname(fn) === '.yaml');
-
-    yamlFiles.forEach(file => {
-      const fileContent = fs.readFileSync(file, 'utf8');
-      try {
-        const data = yaml.parse(fileContent);
-        ws.send(JSON.stringify(data));
-        reportData.push(`Sent data for file: ${file}`);
-      } catch (err) {
-        reportData.push(`Failed to parse or send data for file: ${file} due to ${err.message}`);
-        throw new Error(`Failed to parse or send data for file: ${file} due to ${err.message}`);
-      }
-    });
-
-    const template = `
-    <html>
-      <head>
-        <title>YAML processing report</title>
-      </head>
-      <body>
-        <h1>YAML processing report</h1>
-        <ul>
-          <% reportData.forEach(function(item){ %>
-            <li><%- item %></li>
-          <% }); %>
-        </ul>
-      </body>
-    </html>
-    `;
-
-    const reportHTML = ejs.render(template, { reportData });
-
-    fs.writeFileSync('report.html', reportHTML);
-  });
-  ws.on('error', function error(err) {
-    reportData.push(`WebSocket connection failed due to ${err.message}`);
-    throw new Error(`WebSocket connection failed due to ${err.message}`);
-  });
+  };
+  dirEachWalk(rootPath);
+  return result;
 }
-
-function searchDirectory(directory) {
-  const fileList = [];
-
-  function traverse(currentPath) {
-    const files = fs.readdirSync(currentPath);
-
-    for (const file of files) {
-      const filePath = path.join(currentPath, file);
-      const fileStat = fs.statSync(filePath);
-
-      if (fileStat.isFile()) {
-        const ext = path.extname(file);
-        if (ext === '.yml' || ext === '.yaml') {
-          fileList.push({
-            filename: file,
-            path: filePath,
-            status: 'awaiting'
-          });
-        }
-      } else if (fileStat.isDirectory() && !fileStat.isSymbolicLink()) {
-        traverse(filePath);
-      }
-    }
-  }
-
-  traverse(directory);
-
+function yamlFsEntryDo(fse) {
+  const {data: ignore, ...rest} = fse;
+  console.log(JSON.stringify(rest,null,2))
+  fileList.push(fse);
   return fileList;
 }
 
-function printTable(files) {
-  const template = fs.readFileSync('table-template.ejs', 'utf-8');
-  const html = ejs.render(template, { files });
-
-  fs.writeFileSync('report.html', html, 'utf-8');
+var client_payload;
+if(process?.env?.PAYLOAD) {
+  client_payload = JSON.parse(process.env.PAYLOAD);
 }
+else {
+  // = `{"msty_endpoint": "msty.sm.st"}`;
+  const thisFilePath = fileURLToPath(import.meta.url);
+  var {client_payload} = JSON.parse(fs.readFileSync(fs_path.join(
+    fs_path.dirname(fs_path.dirname(thisFilePath)),'trigger.curl.json'), 'utf-8'));
+}
+console.log('client_payload:', JSON.stringify(client_payload,null,2));
 
-const cwd = process.cwd();
-console.log(`cwd: ${cwd}`);
-const directoryPath = cwd;
-const files = searchDirectory(directoryPath);
-console.log(files);
-printTable(files);
+const msty_endpoint = client_payload.msty_endpoint;
+const fileList      = [],
+      cwd           = process.cwd(),
+      directoryPath = client_payload?.path || cwd;
+console.log(`directoryPath: ${directoryPath}`);
+eachYamlFsEntryDeepDo({path: directoryPath, do:yamlFsEntryDo});
+console.log(fileList);
