@@ -10,7 +10,6 @@ import μefkt from './μefkt.core.mjs';
 μefkt.CoreBioApiMxn = ($superclass,this$mx) => class extends $superclass {
   constructor() { super(); this.pipe = null; }
   initThis() {
-    console.log(`initThis CoreBioApiMxn`);
   }
   connect(...options) {
     const wsOptions = μefkt.BioPipe.prepareWsOptions(...options);
@@ -45,7 +44,6 @@ import μefkt from './μefkt.core.mjs';
   constructor() { super();}
   initThis() {
     super.initThis();
-    console.log(`initThis EfsBioApiMxn`);
   }
   async upsertFile(options) {
     //🔰 assumes `upsertFile().then..` or `await ..`

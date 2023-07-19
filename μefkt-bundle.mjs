@@ -6,7 +6,6 @@ export default μefkt;
 const BioBusPushMxn = ($superclass,this$mx) => class extends $superclass {
   initThis() {
     super.initThis();
-    console.log(`initThis BioBusPushMxn`);
   }
   async sendXlinkPush(options) {
     //🔰 assumes `sendXlinkPush().then..` or `await ..`
@@ -20,7 +19,6 @@ const BioBusPushMxn = ($superclass,this$mx) => class extends $superclass {
 const BioBusAcctMxn = ($superclass,this$mx) => class extends $superclass {
   initThis() {
     super.initThis();
-    console.log(`initThis BioBusAcctMxn`);
   }
   async updateAcctDetails(options) {
     //🔰 assumes `updateAcctDetails().then..` or `await ..`
@@ -37,7 +35,8 @@ class BioBus extends μefkt.mixin(EventTarget, μefkt.CoreBioApiMxn,
 {
   constructor() { super();
     //👷 construction-complete; run abia-init-phase
-    μefkt.esh = μefkt.esh || this;
+    if(!μefkt?.esh)
+      (μefkt.esh = this).apvMap = new μefkt.ApvMap();
     this.initThis();
   }
   initThis() {
@@ -52,16 +51,6 @@ class BioBus extends μefkt.mixin(EventTarget, μefkt.CoreBioApiMxn,
     const detail = e?.detail, status = detail?.status;
     console.log(`RECV onUpdateAuthRp[${e.type}]:`, JSON.stringify(detail, null, 2));
     //🚧 handle login success/failure notification
-    let btrp; const btrp_apv = this.getFiles({
-      path: '/user/*',
-    });
-    try {
-      btrp = await btrp_apv;
-    } catch(e) {
-      console.log(e);
-    }
-    this.close();
-    console.log(`FIN onUpdateAuthRp[${e.type}]:`, JSON.stringify(btrp, null, 2));
   }
   onBioPipeError(e) {
     const detail = e?.detail;
@@ -70,6 +59,13 @@ class BioBus extends μefkt.mixin(EventTarget, μefkt.CoreBioApiMxn,
   onBioPipeClosedClosed(e) {
     const detail = e?.detail;
     console.log(`BioPipe connection closed ${detail?.status?.code} ${detail?.status?.msg}`);
+  }
+  async example() {
+    let btrp; const btrp_apv = this.getFiles({
+      path: '/user/*',
+    });
+    try {btrp = await btrp_apv;} catch(e) {console.log(e);}
+    console.log(`FIN example[${btrp?.type}]:`, JSON.stringify(btrp, null, 2));
   }
   static singleton = (()=>{return(new this());})();
 }

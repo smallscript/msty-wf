@@ -22,6 +22,7 @@ else {
   global.WebSocket      = (await import('ws')).WebSocket;
   global.location       = undefined;
 }
+
 class μefkt {
   static esh = undefined;
   static fIsNodeJsPolyfillMode  = fIsNodeJsPolyfillMode;
@@ -344,9 +345,13 @@ class μPromise extends Promise {
       this.state = 'resolved';
       this.value = v;
       // console.log(`μPromise RESOLVING:`,this);
+      if (typeof (this.onSettling) === 'function')
+        this.onSettling(this, ...a);
+      else if (typeof (this.onResolving) === 'function')
+        this.onResolving(this, ...a);
       this.resolve_(this.value = v, ...a);
-      if (typeof (this.onResolved) === 'function')
-        this.onResolved(this, ...a);
+      // if (typeof (this.onResolved) === 'function')
+      //   this.onResolved(this, ...a);
     }
     this.cancelTimer();
     return this.value;
@@ -357,9 +362,13 @@ class μPromise extends Promise {
       this.state = 'rejected';
       this.value = (e instanceof Error) ? e : μPromise.Error(e, this.name);
       // console.log(`μPromise REJECTING[${e}]:`,this);
+      if (typeof (this.onSettling) === 'function')
+        this.onSettling(this, ...a);
+      else if (typeof (this.onRejecting) === 'function')
+        this.onRejecting(this, ...a);
       this.reject_(this.value, ...a);
-      if (typeof (this.onRejected) === 'function')
-        this.onRejected(this, ...a);
+      // if (typeof (this.onRejected) === 'function')
+      //   this.onRejected(this, ...a);
     }
     this.cancelTimer();
     return this.value;
@@ -387,7 +396,52 @@ class μPromise extends Promise {
   }
   static APromise = (() => { const $class = this; return function (...a) { return new $class(...a); }; })();
 };
-μefkt.APromise = μPromise.APromise;
+class ApvMap extends Map {
+  initNewPromise(mrec) {
+    // mrec supports `{event:{type, once, signal}, once‹unregister-onSettling›}`
+    // ToDo: add support for a watchdog-settlement timer
+    (mrec.apv = new μefkt.APromise()).options = mrec;
+    if(mrec?.once)
+      mrec.apv.onSettling = (...a)=> {
+        // console.log(`｢ApvMap⋱onSettling｣ '${mrec.key.toString()}'`,mrec,...a);
+        this.delete(mrec.symKey)
+      };
+  }
+  get(optionsOrKey) {
+    // options supports `{event:{type, once, signal}, once‹unregister-onSettling›}`
+    var {key, ...rest} = optionsOrKey?.key ? optionsOrKey : {key:optionsOrKey};
+    var symKey = (typeof(key) == 'symbol') ? key : Symbol.for(key), mrec;
+    if(!(mrec = super.get(symKey))) {
+      this.initNewPromise(mrec = {key, symKey, ...rest});
+      if(mrec?.event?.type) { const event = mrec.event;
+        event.target = event.target || μefkt?.esh;
+        const eventOptions = {
+          once    : mrec.once || event.once,
+          capture : event.capture,
+          passive : event.passive,
+          signal  : event.signal,
+        };
+        event.target.addEventListener(event.type, (e)=> {
+          // console.log(`｢ApvMap⋱get⋱new⋱event⋱fired｣ '${event.type}'`,mrec.apv, e);
+          mrec.apv.settle(e);
+          if(!eventOptions.once)
+            this.initNewPromise(mrec);
+        }, eventOptions);
+        // console.log(`｢ApvMap⋱get⋱new⋱event⋱registered｣ '${key.toString()}'`,mrec.apv);
+      }
+      super.set(symKey,mrec);
+      // console.log(`｢ApvMap⋱get⋱new⋱fin｣ '${key.toString()}'`,mrec.apv);
+    }
+    // console.log(`｢ApvMap⋱get｣ querying apvMap.map @ '${key.toString()}'`, mrec.apv);
+    return mrec.apv;
+  }
+  delete(optionsOrKey) {
+    var {key, ...rest} = optionsOrKey?.key ? optionsOrKey : {key:optionsOrKey};
+    var symKey = (typeof(key) == 'symbol') ? key : Symbol.for(key);
+    super.delete(symKey);
+    // console.log(`｢ApvMap⋱delete｣ '${key.toString()}'`, optionsOrKey);
+  }
+}
 
 class BioPipe extends WebSocket {
   constructor(url, options, eventTarget) {
@@ -457,7 +511,8 @@ class BioPipe extends WebSocket {
   }
   init_listeners() {
     this.addEventListener('open', () => {
-      console.log('BioPipe connected to server');
+      this.recvBioMsg({type: '/bio/bioPipeOpen',
+        status:{code: 4200, msg: 'BioPipe connected to server'}});
     });
     this.addEventListener('message', (msg) => {
       msg = (global.Buffer && msg instanceof global.Buffer)
@@ -543,5 +598,6 @@ class BioPipe extends WebSocket {
     return btrp_apv;
   }
 }
-
+μefkt.APromise = μPromise.APromise;
+μefkt.ApvMap   = ApvMap;
 export default μefkt;
