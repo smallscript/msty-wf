@@ -4,6 +4,7 @@
   "description": "",
   "main": "msty-job-main.mjs",
   "scripts": {
+    "start": "node --experimental-modules msty-job-main.mjs",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

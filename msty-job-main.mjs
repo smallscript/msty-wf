@@ -1,6 +1,4 @@
-import WebSocket from 'ws';
-// globally pollute to expose WebSocket
-import μefkt    from './μefkt.core.mjs';
+import μefkt    from './μefkt-bundle.mjs';
 import fs       from 'fs';
 import fs_path  from 'path';
 import { fileURLToPath } from 'url';
@@ -44,19 +42,25 @@ function yamlFsEntryDo(fse) {
 var client_payload;
 if(process?.env?.PAYLOAD) {
   client_payload = JSON.parse(process.env.PAYLOAD);
+  console.log('client_payload:', JSON.stringify(client_payload,null,2));
 }
 else {
-  // = `{"msty_endpoint": "msty.sm.st"}`;
   const thisFilePath = fileURLToPath(import.meta.url);
   var {client_payload} = JSON.parse(fs.readFileSync(fs_path.join(
     fs_path.dirname(fs_path.dirname(thisFilePath)),'trigger.curl.json'), 'utf-8'));
 }
-console.log('client_payload:', JSON.stringify(client_payload,null,2));
 
 const msty_endpoint = client_payload.msty_endpoint;
 const fileList      = [],
       cwd           = process.cwd(),
       directoryPath = client_payload?.path || cwd;
-console.log(`directoryPath: ${directoryPath}`);
+
+console.log(`MSTY Job Scanning: "${directoryPath}"`);
 eachYamlFsEntryDeepDo({path: directoryPath, do:yamlFsEntryDo});
-console.log(fileList);
+
+// only for auto-testing connection
+if(μefkt.fIsNodeJsPolyfillMode) {
+  const bio_endpoint = `https://${μefkt.esh.pga_buid = 'msty.sm.st'}/bio`;
+  //μefkt.esh.bio_token = "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE2ODczNTU3NDIsImV4cCI6MTY4Nzk2MDU0MiwiaXNzIjoiaGN0YS5jb3JwLnN0Iiwic3ViIjoiezFlZTBiOGUxLTA3MmUtNjAyMC1iZTVkLTQ4ZTI0NGY2MDUxYX0iLCJiaWQiOiJ7MzYzZjZlZjQtODM4Zi01Yzc3LWE1ZWQtMjU4YzgyM2MwOTg5fSIsIm9pZCI6IntlOTVhOTVkNy03OTJkLTUyMmUtOTA4ZS1hZDRiNjY3NzFhOGN9IiwiYXVkIjoiaGN0YS5jb3JwLnN0Iiwic2NwIjoib3BlbmlkIGF1dG8tcmVuZXcgaGN0YS1hZG1pbiJ9.ouY6WtidivmzqvB1YRs_dSBplhFeSztL2BPc67T3_r5chNpiuG7M_tohHtU38ZT_AxzEnM_FudRfMMkgN5L6ow";
+  μefkt.esh.connect(bio_endpoint);
+}
