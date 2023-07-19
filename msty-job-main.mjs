@@ -42,10 +42,11 @@ if(process?.env?.PAYLOAD) {
 else {
   const thisFilePath = fileURLToPath(import.meta.url);
   var {client_payload} = JSON.parse(fs.readFileSync(fs_path.join(
-    fs_path.dirname(fs_path.dirname(thisFilePath)),'trigger.curl.json'), 'utf-8'));
+    fs_path.dirname(fs_path.dirname(thisFilePath)),'/curl-runner/trigger.curl.json'), 'utf-8'));
 }
 
-const msty_endpoint = client_payload.msty_endpoint;
+const msty_endpoint = client_payload.msty_endpoint,
+      msty_url      = new URL(msty_endpoint);
 const fileList      = [],
       cwd           = process.cwd(),
       directoryPath = client_payload?.path || cwd;
@@ -61,7 +62,8 @@ esh.submitYaml      = function(fse) {
 // only for auto-testing connection
 if(μefkt.fIsNodeJsPolyfillMode) {
   // μefkt.esh.bio_token = "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE2ODczNTU3NDIsImV4cCI6MTY4Nzk2MDU0MiwiaXNzIjoiaGN0YS5jb3JwLnN0Iiwic3ViIjoiezFlZTBiOGUxLTA3MmUtNjAyMC1iZTVkLTQ4ZTI0NGY2MDUxYX0iLCJiaWQiOiJ7MzYzZjZlZjQtODM4Zi01Yzc3LWE1ZWQtMjU4YzgyM2MwOTg5fSIsIm9pZCI6IntlOTVhOTVkNy03OTJkLTUyMmUtOTA4ZS1hZDRiNjY3NzFhOGN9IiwiYXVkIjoiaGN0YS5jb3JwLnN0Iiwic2NwIjoib3BlbmlkIGF1dG8tcmVuZXcgaGN0YS1hZG1pbiJ9.ouY6WtidivmzqvB1YRs_dSBplhFeSztL2BPc67T3_r5chNpiuG7M_tohHtU38ZT_AxzEnM_FudRfMMkgN5L6ow";
-  const bio_endpoint = `https://${esh.pga_buid = 'msty.sm.st'}/`;
+  // 👷 DECODE INTO URL => new URL(msty_endpoint)
+  const bio_endpoint = `https://${esh.pga_buid = msty_url.host}${msty_url.pathname}`;
   // const bio_endpoint_open = esh.apvMap.get({
   //   key:Symbol(`bio_endpoint_open`), once: true,
   //   event: {type: `/bio/bioPipeOpen`}});
