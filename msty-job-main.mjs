@@ -25,29 +25,8 @@ const fileList      = [],
       directoryPath = client_payload?.path || process.cwd();
 const msty_bio_api  = {
   //🔰  MSTY API Suite
-  submitYaml(fse) {
-    const btrq = {...fse,
-      type: '/msty.sm.st/submitYaml',
-    }
-    return this.sendAsyncBioMsg(btrq); //, μefkt.APromise());
-  },
-  onAckYaml(event) {
-    console.log(`YAML Received:`, JSON.stringify(event?.detail,null,2))
-  },
-  sendYamlSubmitFinished(fse) {
-    const btrq = {...fse,
-      type: '/msty.sm.st/submitYaml/finished',
-    }
-    return this.sendAsyncBioMsg(btrq); //, μefkt.APromise());
-  },
-  yamlFsEntryDo(fse) {
-    fileList.push(fse);
-    const {data: ignore, ...rest} = fse;
-    console.log(JSON.stringify(rest,null,2));
-    return Shell.submitYaml(fse);
-  },
-  async eachYamlFsEntryDeepDo$({path: rootPath, do: eachDo}) {
-    var result; async function dirEachWalk(curPath) {
+  async eachYamlFsEntryDeepDo$({path: rootPath, do: eachDo$}) {
+    var result; async function dirEachWalk$(curPath) {
       const dirEntries = fs.readdirSync(curPath);
       for (const fnm of dirEntries) {
         const fpn      = fs_path.join(curPath, fnm),
@@ -55,11 +34,11 @@ const msty_bio_api  = {
         if(fpn_stat.isSymbolicLink())
           continue;
         else if (fpn_stat.isDirectory())
-          await dirEachWalk(fpn);
+          await dirEachWalk$(fpn);
         else if (fpn_stat.isFile()) {
           const ext = fs_path.extname(fnm);
           if (ext === '.yml' || ext === '.yaml')
-            result = await eachDo({
+            result = await eachDo$({
               name        : fnm,
               path        : fpn,
               size        : fpn_stat.size,
@@ -70,8 +49,32 @@ const msty_bio_api  = {
         }
       }
     };
-    await dirEachWalk(rootPath);
+    await dirEachWalk$(rootPath);
     return result;
+  },
+  yamlFsEntryDo(fse) {
+    //🦜 log it for debugging
+    const {data: ignore, ...rest} = fse;
+    console.log(JSON.stringify(rest,null,2));
+    //🧶 track it for inspection and reporting aggregation
+    fileList.push(fse);
+    //👷 submit `fse` for processing to the msty-service
+    return Shell.submitYaml(fse);
+  },
+  submitYaml(fse) {
+    const btrq = {...fse,
+      type: '/msty.sm.st/submitYaml',
+    }
+    return this.sendAsyncBioMsg(btrq); //, μefkt.APromise());
+  },
+  onAckYaml(event) {
+    console.log(`YAML Received:`, JSON.stringify(event?.detail,null,2))
+  },
+  sendSubmitYamlFinished(fse) {
+    const btrq = {...fse,
+      type: '/msty.sm.st/submitYaml/finished',
+    }
+    return this.sendAsyncBioMsg(btrq); //, μefkt.APromise());
   },
 }; Object.assign(Shell, msty_bio_api);
 
@@ -87,16 +90,16 @@ if(μefkt.fIsNodeJsPolyfillMode) {
   const bio_auth_received$ = Shell.apvMap.get({
     key:Symbol(`bio_auth_received`), once: true,
     event: {type: `/bio/acdn/updateAuthRp`}});
+  Shell.addEventListener('/msty.sm.st/ackYaml', Shell.onAckYaml, {passive:true});
   const bio_pipe_closed$ = Shell.apvMap.get({
     key:Symbol(`bio_pipe_closed`), once: true,
     event: {type: `/bio/bioPipeClosed`}});
-  Shell.addEventListener('/msty.sm.st/ackYaml', Shell.onAckYaml, {passive:true});
 
   // 👷 await pipe-established with auth-approval
   Shell.connect(bio_endpoint); await bio_auth_received$;
   console.log(`MSTY Job Scanning: "${directoryPath}"`);
   await Shell.eachYamlFsEntryDeepDo$({path: directoryPath, do: Shell.yamlFsEntryDo});
-  Shell.sendYamlSubmitFinished();  // await results OR just close
+  Shell.sendSubmitYamlFinished();  // await results OR just close
   await bio_pipe_closed$;
   // Shell.removeEventListener('/msty.sm.st/ackYaml', Shell.onAckYaml, {passive:true});
 }
