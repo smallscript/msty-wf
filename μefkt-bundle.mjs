@@ -49,7 +49,7 @@ class BioBus extends μefkt.mixin(EventTarget, μefkt.CoreBioApiMxn,
   async onUpdateAuthRp(e) {
     //🦜 see: `onBioPipeChanged`. This call always follows `onBioPipeChanged`.
     const detail = e?.detail, status = detail?.status;
-    console.log(`RECV onUpdateAuthRp[${e.type}]:`, JSON.stringify(detail, null, 2));
+    // console.log(`RECV onUpdateAuthRp[${e.type}]:`, JSON.stringify(detail, null, 2));
     //🚧 handle login success/failure notification
   }
   onBioPipeError(e) {

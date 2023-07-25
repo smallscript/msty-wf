@@ -40,7 +40,7 @@ const msty_bio_api  = {
           if (ext === '.yml' || ext === '.yaml')
             result = await eachDo$({
               name        : fnm,
-              path        : fpn,
+              path        : fpn.replace('\\','/'),
               size        : fpn_stat.size,
               etCreated   : fpn_stat.birthtime.getTime(),
               etModified  : fpn_stat.mtime.getTime(),
@@ -55,7 +55,7 @@ const msty_bio_api  = {
   yamlFsEntryDo(fse) {
     //🦜 log it for debugging
     const {data: ignore, ...rest} = fse;
-    console.log(JSON.stringify(rest,null,2));
+    console.log(`submitYaml.${fileList.length}`, JSON.stringify(rest,null,2));
     //🧶 track it for inspection and reporting aggregation
     fileList.push(fse);
     //👷 submit `fse` for processing to the msty-service
@@ -67,8 +67,9 @@ const msty_bio_api  = {
     }
     return this.sendAsyncBioMsg(btrq); //, μefkt.APromise());
   },
-  onAckYaml(event) {
-    console.log(`YAML Received:`, JSON.stringify(event?.detail,null,2))
+  onSubmitYamlReply(event) {
+    const payload = event?.detail?.type ? event.detail : event;
+    console.log(`on[${payload.type}]`, JSON.stringify(payload,null,2))
   },
   sendSubmitYamlFinished(fse) {
     const btrq = {...fse,
@@ -90,16 +91,20 @@ if(μefkt.fIsNodeJsPolyfillMode) {
   const bio_auth_received$ = Shell.apvMap.get({
     key:Symbol(`bio_auth_received`), once: true,
     event: {type: `/bio/acdn/updateAuthRp`}});
-  Shell.addEventListener('/msty.sm.st/ackYaml', Shell.onAckYaml, {passive:true});
+  Shell.addEventListener('/msty.sm.st/submitYaml/reply', Shell.onSubmitYamlReply, {passive:true});
   const bio_pipe_closed$ = Shell.apvMap.get({
     key:Symbol(`bio_pipe_closed`), once: true,
     event: {type: `/bio/bioPipeClosed`}});
 
   // 👷 await pipe-established with auth-approval
-  Shell.connect(bio_endpoint); await bio_auth_received$;
+  Shell.connect(bio_endpoint);
+  const bio_auth = await bio_auth_received$;
+  console.log(`on[${bio_auth?.type}]:`, JSON.stringify(bio_auth, null, 2));
+
   console.log(`MSTY Job Scanning: "${directoryPath}"`);
   await Shell.eachYamlFsEntryDeepDo$({path: directoryPath, do: Shell.yamlFsEntryDo});
   Shell.sendSubmitYamlFinished();  // await results OR just close
-  await bio_pipe_closed$;
+  const bio_close = await bio_pipe_closed$;
+  console.log(`on[${bio_close?.type}]:`, JSON.stringify(bio_close, null, 2));
   // Shell.removeEventListener('/msty.sm.st/ackYaml', Shell.onAckYaml, {passive:true});
 }

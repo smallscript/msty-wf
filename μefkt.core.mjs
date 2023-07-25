@@ -432,7 +432,7 @@ class ApvMap extends Map {
         };
         event.target.addEventListener(event.type, (e)=> {
           // console.log(`｢ApvMap⋱get⋱new⋱event⋱fired｣ '${event.type}'`,mrec.apv, e);
-          mrec.apv.settle(e);
+          mrec.apv.settle(e?.detail?.type ? e.detail : e);
           if(!eventOptions.once)
             this.initNewPromise(mrec);
         }, eventOptions);
@@ -543,7 +543,7 @@ class BioPipe extends WebSocket {
           console.error(e);
         }
       }
-      this.recvBioMsg({type: '/bio/bioPipeClosed', status:{code, msg: msg}});
+      this.recvBioMsg({type: '/bio/bioPipeClosed', status:{code, msg: msg.toString()}});
       // console.log(`BioPipe connection closed ${code} ${msg}`);
     });
     this.addEventListener('error', (error) => {
