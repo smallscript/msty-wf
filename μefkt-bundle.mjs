@@ -35,8 +35,8 @@ class BioBus extends μefkt.mixin(EventTarget, μefkt.CoreBioApiMxn,
 {
   constructor() { super();
     //👷 construction-complete; run abia-init-phase
-    if(!μefkt?.esh)
-      (μefkt.esh = this).apvMap = new μefkt.ApvMap();
+    if(!μefkt?.Shell)
+      (μefkt.Shell = this).apvMap = new μefkt.ApvMap();
     this.initThis();
   }
   initThis() {

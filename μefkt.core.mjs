@@ -22,9 +22,18 @@ else {
   global.WebSocket      = (await import('ws')).WebSocket;
   global.location       = undefined;
 }
-
+var Shell;
 class μefkt {
-  static esh = undefined;
+  static set Shell(v) {
+    //👷 convert `μefkt.‹set›Shell` to a one-shot setter so we can intercept the
+    //   `Shell` construction moment and `var` share it properly in this module.
+    Object.defineProperty(this, 'Shell', {
+      value: Shell = v,
+      writable:false,
+      enumerable:true,
+      configurable:true,
+    });
+  }
   static fIsNodeJsPolyfillMode  = fIsNodeJsPolyfillMode;
   static #fHas_Buffer_from      = global?.Buffer?.from !== undefined;
   static #compose($superclass, mixinTemplateFn) {
@@ -414,7 +423,7 @@ class ApvMap extends Map {
     if(!(mrec = super.get(symKey))) {
       this.initNewPromise(mrec = {key, symKey, ...rest});
       if(mrec?.event?.type) { const event = mrec.event;
-        event.target = event.target || μefkt?.esh;
+        event.target = event.target || μefkt?.Shell;
         const eventOptions = {
           once    : mrec.once || event.once,
           capture : event.capture,
@@ -486,18 +495,17 @@ class BioPipe extends WebSocket {
     else if(typeof host == 'object')
       var {host, route} = host;
 
-    let esh = μefkt.esh;
     const bphv = {
       host      : host,
       pathname  : route?.[0] == '/' ? route : '/'.concat(route || ''),
       bio_openid  : {
-        bcsid         : esh?.bcsid,
-        pga_buid      : esh?.pga_buid || location?.hostname,
-        jwtz          : esh?.bio_token,
+        bcsid         : Shell?.bcsid,
+        pga_buid      : Shell?.pga_buid || location?.hostname,
+        jwtz          : Shell?.bio_token,
         bio_keep_alive: true,
 
         oidc_redirect : location?.href,
-        oidc_tenancy  : esh?.oidc_tenancy,
+        oidc_tenancy  : Shell?.oidc_tenancy,
       },
     };
     // compose BasicAuthProtocol

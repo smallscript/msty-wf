@@ -1,39 +1,12 @@
+//👷 provision dependencies
 import μefkt    from './μefkt-bundle.mjs';
 import fs       from 'fs';
 import fs_path  from 'path';
 import { fileURLToPath } from 'url';
-// report writer
+//🔰 provision a local report writer tool
 import emitReport from './msty-report.mjs';
 
-async function eachYamlFsEntryDeepDo({path: rootPath, do: eachDo}) {
-  var result; async function dirEachWalk(curPath) {
-    const dirEntries = fs.readdirSync(curPath);
-    for (const fnm of dirEntries) {
-      const fpn      = fs_path.join(curPath, fnm),
-            fpn_stat = fs.statSync(fpn);
-      if(fpn_stat.isSymbolicLink())
-        continue;
-      else if (fpn_stat.isDirectory())
-        await dirEachWalk(fpn);
-      else if (fpn_stat.isFile()) {
-        const ext = fs_path.extname(fnm);
-        if (ext === '.yml' || ext === '.yaml')
-          result = await eachDo({
-            name        : fnm,
-            path        : fpn,
-            size        : fpn_stat.size,
-            etCreated   : fpn_stat.birthtime.getTime(),
-            etModified  : fpn_stat.mtime.getTime(),
-            data        : fs.readFileSync(fpn,{encoding:'utf-8'}),
-        });
-      }
-    }
-  };
-  await dirEachWalk(rootPath);
-  return result;
-}
-
-// await pipeConnectedApv;
+//👷 obtain job's input parameters
 var client_payload;
 if(process?.env?.PAYLOAD) {
   client_payload = JSON.parse(process.env.PAYLOAD);
@@ -45,44 +18,85 @@ else {
     fs_path.dirname(fs_path.dirname(thisFilePath)),'/curl-runner/trigger.curl.json'), 'utf-8'));
 }
 
-const msty_endpoint = client_payload.msty_endpoint,
-      msty_url      = new URL(msty_endpoint);
+//👷 prepare job-run configuration settings
+const Shell         = μefkt.Shell;
+const msty_url      = new URL(client_payload.msty_endpoint);
 const fileList      = [],
-      cwd           = process.cwd(),
-      directoryPath = client_payload?.path || cwd;
-const esh           = μefkt.esh;
-//🚧 open code for now
-esh.submitYaml      = function(fse) {
-  const btrq = {...fse,
-    type: '/msty.sm.st/submitYaml',
-  }
-  return this.sendAsyncBioMsg(btrq); //, μefkt.APromise());
-}
-
-// only for auto-testing connection
-if(μefkt.fIsNodeJsPolyfillMode) {
-  // μefkt.esh.bio_token = "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE2ODczNTU3NDIsImV4cCI6MTY4Nzk2MDU0MiwiaXNzIjoiaGN0YS5jb3JwLnN0Iiwic3ViIjoiezFlZTBiOGUxLTA3MmUtNjAyMC1iZTVkLTQ4ZTI0NGY2MDUxYX0iLCJiaWQiOiJ7MzYzZjZlZjQtODM4Zi01Yzc3LWE1ZWQtMjU4YzgyM2MwOTg5fSIsIm9pZCI6IntlOTVhOTVkNy03OTJkLTUyMmUtOTA4ZS1hZDRiNjY3NzFhOGN9IiwiYXVkIjoiaGN0YS5jb3JwLnN0Iiwic2NwIjoib3BlbmlkIGF1dG8tcmVuZXcgaGN0YS1hZG1pbiJ9.ouY6WtidivmzqvB1YRs_dSBplhFeSztL2BPc67T3_r5chNpiuG7M_tohHtU38ZT_AxzEnM_FudRfMMkgN5L6ow";
-  // 👷 DECODE INTO URL => new URL(msty_endpoint)
-  const bio_endpoint = `https://${esh.pga_buid = msty_url.host}${msty_url.pathname}`;
-  // const bio_endpoint_open = esh.apvMap.get({
-  //   key:Symbol(`bio_endpoint_open`), once: true,
-  //   event: {type: `/bio/bioPipeOpen`}});
-  const bio_auth_received = esh.apvMap.get({
-    key:Symbol(`bio_auth_received`), once: true,
-    event: {type: `/bio/acdn/updateAuthRp`}});
-  esh.connect(bio_endpoint);
-  // await bio_endpoint_open;
-  await bio_auth_received;
-
-  function yamlFsEntryDo(fse) {
+      directoryPath = client_payload?.path || process.cwd();
+const msty_bio_api  = {
+  //🔰  MSTY API Suite
+  submitYaml(fse) {
+    const btrq = {...fse,
+      type: '/msty.sm.st/submitYaml',
+    }
+    return this.sendAsyncBioMsg(btrq); //, μefkt.APromise());
+  },
+  onAckYaml(event) {
+    console.log(`YAML Received:`, JSON.stringify(event?.detail,null,2))
+  },
+  sendYamlSubmitFinished(fse) {
+    const btrq = {...fse,
+      type: '/msty.sm.st/submitYaml/finished',
+    }
+    return this.sendAsyncBioMsg(btrq); //, μefkt.APromise());
+  },
+  yamlFsEntryDo(fse) {
     fileList.push(fse);
     const {data: ignore, ...rest} = fse;
     console.log(JSON.stringify(rest,null,2));
-    return esh.submitYaml(fse);
-  }
+    return Shell.submitYaml(fse);
+  },
+  async eachYamlFsEntryDeepDo$({path: rootPath, do: eachDo}) {
+    var result; async function dirEachWalk(curPath) {
+      const dirEntries = fs.readdirSync(curPath);
+      for (const fnm of dirEntries) {
+        const fpn      = fs_path.join(curPath, fnm),
+              fpn_stat = fs.statSync(fpn);
+        if(fpn_stat.isSymbolicLink())
+          continue;
+        else if (fpn_stat.isDirectory())
+          await dirEachWalk(fpn);
+        else if (fpn_stat.isFile()) {
+          const ext = fs_path.extname(fnm);
+          if (ext === '.yml' || ext === '.yaml')
+            result = await eachDo({
+              name        : fnm,
+              path        : fpn,
+              size        : fpn_stat.size,
+              etCreated   : fpn_stat.birthtime.getTime(),
+              etModified  : fpn_stat.mtime.getTime(),
+              data        : fs.readFileSync(fpn,{encoding:'utf-8'}),
+          });
+        }
+      }
+    };
+    await dirEachWalk(rootPath);
+    return result;
+  },
+}; Object.assign(Shell, msty_bio_api);
 
+//🦜 NodeJs based auto-run testing
+if(μefkt.fIsNodeJsPolyfillMode) {
+  //🔰 pre-flight msty-service configuration
+  // μefkt.Shell.bio_token = "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE2ODczNTU3NDIsImV4cCI6MTY4Nzk2MDU0MiwiaXNzIjoiaGN0YS5jb3JwLnN0Iiwic3ViIjoiezFlZTBiOGUxLTA3MmUtNjAyMC1iZTVkLTQ4ZTI0NGY2MDUxYX0iLCJiaWQiOiJ7MzYzZjZlZjQtODM4Zi01Yzc3LWE1ZWQtMjU4YzgyM2MwOTg5fSIsIm9pZCI6IntlOTVhOTVkNy03OTJkLTUyMmUtOTA4ZS1hZDRiNjY3NzFhOGN9IiwiYXVkIjoiaGN0YS5jb3JwLnN0Iiwic2NwIjoib3BlbmlkIGF1dG8tcmVuZXcgaGN0YS1hZG1pbiJ9.ouY6WtidivmzqvB1YRs_dSBplhFeSztL2BPc67T3_r5chNpiuG7M_tohHtU38ZT_AxzEnM_FudRfMMkgN5L6ow";
+  const bio_endpoint = `https://${Shell.pga_buid = msty_url.host}${msty_url.pathname}`;
+
+  // const bio_endpoint_open = Shell.apvMap.get({
+  //   key:Symbol(`bio_endpoint_open`), once: true,
+  //   event: {type: `/bio/bioPipeOpen`}});
+  const bio_auth_received$ = Shell.apvMap.get({
+    key:Symbol(`bio_auth_received`), once: true,
+    event: {type: `/bio/acdn/updateAuthRp`}});
+  const bio_pipe_closed$ = Shell.apvMap.get({
+    key:Symbol(`bio_pipe_closed`), once: true,
+    event: {type: `/bio/bioPipeClosed`}});
+  Shell.addEventListener('/msty.sm.st/ackYaml', Shell.onAckYaml, {passive:true});
+
+  // 👷 await pipe-established with auth-approval
+  Shell.connect(bio_endpoint); await bio_auth_received$;
   console.log(`MSTY Job Scanning: "${directoryPath}"`);
-  await eachYamlFsEntryDeepDo({path: directoryPath, do:yamlFsEntryDo});
-  // await results OR just close
-  esh.close();
+  await Shell.eachYamlFsEntryDeepDo$({path: directoryPath, do: Shell.yamlFsEntryDo});
+  Shell.sendYamlSubmitFinished();  // await results OR just close
+  await bio_pipe_closed$;
+  // Shell.removeEventListener('/msty.sm.st/ackYaml', Shell.onAckYaml, {passive:true});
 }
