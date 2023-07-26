@@ -249,8 +249,8 @@ class ApvMgr extends EventTarget {
     new_shell.dispatchEvent = (...a)=>this.dispatchEvent(...a);
     new_shell.addEventListener = (...a)=>this.addEventListener(...a);
     new_shell.removeEventListener = (...a)=>this.removeEventListener(...a);
-    new_shell.get$ = (...a)=>this.get(...a);
-    new_shell.delete$ = (...a)=>this.delete(...a);
+    new_shell.get$ = (...a)=>this.get$(...a);
+    new_shell.delete$ = (...a)=>this.delete$(...a);
     return(Shell = new_shell);
   }
   static #init = (() => {
