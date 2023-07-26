@@ -553,7 +553,7 @@ class BioPipe extends WebSocket {
     this.addEventListener('close', (code, msg) => {
       // fail every outstanding request
       for (const [btRpId, btrp_apv] of this.btRpId_apvCompletionMap.entries()) {
-        console.log(btRpId, btrp_apv);
+        console.log(`｢btRpId_apvCompletionMap｣`,btRpId, btrp_apv);
         try {
           const error     = new this.constructor.BioPipeError(
             this.constructor.eBpStatus.btrpUnsettledAtClose, this);
@@ -586,10 +586,11 @@ class BioPipe extends WebSocket {
   }
   recvBioMsg(msg) {
     // Settle any async responses here
-    console.log(`recvBioMsg`, JSON.stringify(msg,null,2))
+    // console.log(`recvBioMsg`, JSON.stringify(msg,null,2))
     if(msg.btRp2RqId) {
       const btrp_apv = this.btRpId_apvCompletionMap.get(msg.btRp2RqId);
       if(btrp_apv) {
+        this.btRpId_apvCompletionMap.delete(msg.btRp2RqId);
         if(!msg?.type || msg?.status?.fIsError)
           btrp_apv.reject(msg);
         else
