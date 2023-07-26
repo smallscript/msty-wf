@@ -204,12 +204,11 @@ class ApvMgr extends EventTarget {
     new_shell.dispatchEvent = (...a)=>this.dispatchEvent(...a);
     new_shell.addEventListener = (...a)=>this.addEventListener(...a);
     new_shell.removeEventListener = (...a)=>this.removeEventListener(...a);
-    new_shell.initNewPromise$ = (...a)=>this.initNewPromise(...a);
     new_shell.get$ = (...a)=>this.get(...a);
     new_shell.delete$ = (...a)=>this.delete(...a);
   }
   constructor(...a) {super(...a);this.$map = new Map();}
-  initNewPromise(mrec) {
+  $initNewPromise(mrec) {
     // mrec supports `{event:{type, once, signal}, once‹unregister-onSettling›}`
     // ToDo: add support for a watchdog-settlement timer
     (mrec.apv = new μefkt.APromise()).options = mrec;
@@ -219,15 +218,15 @@ class ApvMgr extends EventTarget {
         this.delete(mrec.symKey)
       };
   }
-  get defaultTarget() {return this.constructor.$default;}
-  get(optionsOrKey) {
+  get $defaultTarget() {return this.constructor.$default;}
+  get$(optionsOrKey) {
     // options supports `{event:{type, once, signal}, once‹unregister-onSettling›}`
     var {key, ...rest} = optionsOrKey?.key ? optionsOrKey : {key:optionsOrKey};
     var symKey = (typeof(key) == 'symbol') ? key : Symbol.for(key), mrec;
     if(!(mrec = this.$map.get(symKey))) {
-      this.initNewPromise(mrec = {key, symKey, ...rest});
+      this.$initNewPromise(mrec = {key, symKey, ...rest});
       if(mrec?.event?.type) { const event = mrec.event;
-        event.target = event.target || this.defaultTarget;
+        event.target = event.target || this.$defaultTarget;
         const eventOptions = {
           once    : mrec.once || event.once,
           capture : event.capture,
@@ -238,7 +237,7 @@ class ApvMgr extends EventTarget {
           // console.log(`｢ApvMgr⋱get⋱new⋱event⋱fired｣ '${event.type}'`,mrec.apv, e);
           mrec.apv.settle(e?.detail?.type ? e.detail : e);
           if(!eventOptions.once)
-            this.initNewPromise(mrec);
+            this.$initNewPromise(mrec);
         }, eventOptions);
         // console.log(`｢ApvMgr⋱get⋱new⋱event⋱registered｣ '${key.toString()}'`,mrec.apv);
       }
@@ -248,7 +247,7 @@ class ApvMgr extends EventTarget {
     // console.log(`｢ApvMgr⋱get｣ querying apvMgr.map @ '${key.toString()}'`, mrec.apv);
     return mrec.apv;
   }
-  delete(optionsOrKey) {
+  delete$(optionsOrKey) {
     var {key, ...rest} = optionsOrKey?.key ? optionsOrKey : {key:optionsOrKey};
     var symKey = (typeof(key) == 'symbol') ? key : Symbol.for(key);
     this.$map.delete(symKey);
