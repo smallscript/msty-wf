@@ -30,14 +30,12 @@ const BioBusAcctMxn = ($superclass,this$mx) => class extends $superclass {
   }
 }
 
-class BioBus extends μefkt.mixin(EventTarget, μefkt.CoreBioApiMxn,
+class BioBus extends μefkt.mixin(Object, μefkt.CoreBioApiMxn,
   μefkt.EfsBioApiMxn, BioBusPushMxn, BioBusAcctMxn)
 {
   constructor() { super();
     //👷 construction-complete; run abia-init-phase
-    if(!μefkt?.Shell)
-      this.apvMap = new μefkt.ApvMap(), μefkt.Shell = this;
-    this.initThis();
+    (μefkt.Shell = this).initThis();
   }
   initThis() {
     super.initThis();
@@ -46,6 +44,9 @@ class BioBus extends μefkt.mixin(EventTarget, μefkt.CoreBioApiMxn,
     this.addEventListener('/:bio/bioPipeError',      e=>this.onBioPipeError(e));
     this.addEventListener('/:bio/bioPipeClosed',     e=>this.onBioPipeClosedClosed(e));
   }
+  dispatchEvent(...a) {return this.apvMgr.dispatchEvent(...a);}
+  addEventListener(...a) {return this.apvMgr.addEventListener(...a);}
+  removeEventListener(...a) {return this.apvMgr.removeEventListener(...a);}
   async onUpdateAuthRp(e) {
     //🦜 see: `onBioPipeChanged`. This call always follows `onBioPipeChanged`.
     const detail = e?.detail, status = detail?.status;

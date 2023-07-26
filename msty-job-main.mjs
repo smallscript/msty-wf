@@ -85,14 +85,14 @@ if(μefkt.fIsNodeJsPolyfillMode) {
   // μefkt.Shell.bio_token = "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE2ODczNTU3NDIsImV4cCI6MTY4Nzk2MDU0MiwiaXNzIjoiaGN0YS5jb3JwLnN0Iiwic3ViIjoiezFlZTBiOGUxLTA3MmUtNjAyMC1iZTVkLTQ4ZTI0NGY2MDUxYX0iLCJiaWQiOiJ7MzYzZjZlZjQtODM4Zi01Yzc3LWE1ZWQtMjU4YzgyM2MwOTg5fSIsIm9pZCI6IntlOTVhOTVkNy03OTJkLTUyMmUtOTA4ZS1hZDRiNjY3NzFhOGN9IiwiYXVkIjoiaGN0YS5jb3JwLnN0Iiwic2NwIjoib3BlbmlkIGF1dG8tcmVuZXcgaGN0YS1hZG1pbiJ9.ouY6WtidivmzqvB1YRs_dSBplhFeSztL2BPc67T3_r5chNpiuG7M_tohHtU38ZT_AxzEnM_FudRfMMkgN5L6ow";
   const bio_endpoint = `https://${Shell.pga_buid = msty_url.host}${msty_url.pathname}`;
 
-  // const bio_endpoint_open = Shell.apvMap.get({
+  // const bio_endpoint_open = Shell.apvMgr.get({
   //   key:Symbol(`bio_endpoint_open`), once: true,
   //   event: {type: `/:bio/bioPipeOpen`}});
-  const bio_auth_received$ = Shell.apvMap.get({
+  const bio_auth_received$ = Shell.apvMgr.get({
     key:Symbol(`bio_auth_received`), once: true,
     event: {type: `/:bio/acdn/updateAuthRp`}});
   Shell.addEventListener('/:msty.sm.st/submitYaml/reply', Shell.onSubmitYamlReply, {passive:true});
-  const bio_pipe_closed$ = Shell.apvMap.get({
+  const bio_pipe_closed$ = Shell.apvMgr.get({
     key:Symbol(`bio_pipe_closed`), once: true,
     event: {type: `/:bio/bioPipeClosed`}});
 

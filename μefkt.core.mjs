@@ -24,11 +24,13 @@ else {
 }
 var Shell;
 class μefkt {
-  static set Shell(v) {
+  static get Shell() {return this?.ApvMgr?.$default;}
+  static set Shell(new_shell) {
     //👷 convert `μefkt.‹set›Shell` to a one-shot setter so we can intercept the
     //   `Shell` construction moment and `var` share it properly in this module.
+    new_shell.apvMgr = this.ApvMgr.$default;
     Object.defineProperty(this, 'Shell', {
-      value: Shell = v,
+      value: Shell = new_shell,
       writable:false,
       enumerable:true,
       configurable:true,
@@ -108,8 +110,147 @@ class μefkt {
   }
 }
 
+class μPromise extends Promise {
+  state = 'pending';
+  constructor(fnAny, ...a) {
+    const descendentType = new.target;
+    let r, f; super((re, rt) => { r = re, f = rt; }, ...a); this.resolve_ = r, this.reject_ = f;
+    switch (typeof fnAny) {
+      case 'undefined':
+      case 'undefined': break;
+      case 'function': //! `then` will issue a `[native code]` callback on our species; conform!
+        if (fnAny.toString().indexOf('[native code]') >= 0)
+          fnAny(r, f, this, ...a);
+        else
+          fnAny.call(this, this, ...a);
+        break;
+      case 'object':
+        if (fnAny instanceof Date) { this.setTimeout(fnAny, ...a); break; }
+      default:
+        this.resolve(fnAny);
+    }
+  }
+  get settled() { return (this.state !== 'pending' /* i.e., 'fulfilled' */); }
+  get fIsSettled() { return (this.state !== 'pending' /* i.e., 'fulfilled' */); }
+  settle(v,...a) {
+    return (v instanceof Error)
+      ? this.reject(v,...a)
+      : this.resolve(v,...a);
+  }
+  resolve(v, ...a) {
+    if (this.state === 'pending') {
+      //? onPreResolve intercept hook?
+      this.state = 'resolved';
+      this.value = v;
+      // console.log(`μPromise RESOLVING:`,this);
+      if (typeof (this.onSettling) === 'function')
+        this.onSettling(this, ...a);
+      else if (typeof (this.onResolving) === 'function')
+        this.onResolving(this, ...a);
+      this.resolve_(this.value = v, ...a);
+      // if (typeof (this.onResolved) === 'function')
+      //   this.onResolved(this, ...a);
+    }
+    this.cancelTimer();
+    return this.value;
+  }
+  reject(e, ...a) {
+    if (this.state === 'pending') {
+      //? onPreReject intercept hook?
+      this.state = 'rejected';
+      this.value = (e instanceof Error) ? e : μPromise.Error(e, this.name);
+      // console.log(`μPromise REJECTING[${e}]:`,this);
+      if (typeof (this.onSettling) === 'function')
+        this.onSettling(this, ...a);
+      else if (typeof (this.onRejecting) === 'function')
+        this.onRejecting(this, ...a);
+      this.reject_(this.value, ...a);
+      // if (typeof (this.onRejected) === 'function')
+      //   this.onRejected(this, ...a);
+    }
+    this.cancelTimer();
+    return this.value;
+  }
+  setTimeout(nMsFromNowOrDate, value, fIssueReject, ...a) {
+    const deltaInMs = (nMsFromNowOrDate instanceof Date)
+      ? (nMsFromNowOrDate.valueOf() - Date.now()) : nMsFromNowOrDate;
+    return (deltaInMs > 0)
+      ? (this.timerId = setTimeout(() =>
+        this.onTimeout(nMsFromNowOrDate, value, fIssueReject, ...a), deltaInMs))
+      : (fIssueReject
+        ? this.reject(value, nMsFromNowOrDate, ...a)
+        : this.resolve(value, nMsFromNowOrDate, ...a),
+        undefined);
+  }
+  onTimeout(when, value, fIssueReject, ...a) {
+    this.timerId = undefined;
+    return fIssueReject ? this.reject(value, when, ...a) : this.resolve(value, when, ...a);
+  }
+  cancelTimer() { if (this.timerId !== undefined) clearInterval(this.timerId); }
+  static Error(v, name) {
+    var type = (typeof v === 'string') ? v : 'value-rejected';
+    if (name) type = `${name} ${type}`; const e = Error(type); e.value = v;
+    return (e);
+  }
+  static APromise = (() => {
+    const $class  = this;
+    return(μefkt.APromise = function (...a) { return new $class(...a); });
+  })();
+};
+
+class ApvMgr extends EventTarget {
+  constructor(...a) {super(...a);this.$map = new Map();}
+  initNewPromise(mrec) {
+    // mrec supports `{event:{type, once, signal}, once‹unregister-onSettling›}`
+    // ToDo: add support for a watchdog-settlement timer
+    (mrec.apv = new μefkt.APromise()).options = mrec;
+    if(mrec?.once)
+      mrec.apv.onSettling = (...a)=> {
+        // console.log(`｢ApvMgr⋱onSettling｣ '${mrec.key.toString()}'`,mrec,...a);
+        this.delete(mrec.symKey)
+      };
+  }
+  get defaultTarget() {return this.constructor.$default;}
+  get(optionsOrKey) {
+    // options supports `{event:{type, once, signal}, once‹unregister-onSettling›}`
+    var {key, ...rest} = optionsOrKey?.key ? optionsOrKey : {key:optionsOrKey};
+    var symKey = (typeof(key) == 'symbol') ? key : Symbol.for(key), mrec;
+    if(!(mrec = this.$map.get(symKey))) {
+      this.initNewPromise(mrec = {key, symKey, ...rest});
+      if(mrec?.event?.type) { const event = mrec.event;
+        event.target = event.target || this.defaultTarget;
+        const eventOptions = {
+          once    : mrec.once || event.once,
+          capture : event.capture,
+          passive : event.passive,
+          signal  : event.signal,
+        };
+        event.target.addEventListener(event.type, (e)=> {
+          // console.log(`｢ApvMgr⋱get⋱new⋱event⋱fired｣ '${event.type}'`,mrec.apv, e);
+          mrec.apv.settle(e?.detail?.type ? e.detail : e);
+          if(!eventOptions.once)
+            this.initNewPromise(mrec);
+        }, eventOptions);
+        // console.log(`｢ApvMgr⋱get⋱new⋱event⋱registered｣ '${key.toString()}'`,mrec.apv);
+      }
+      this.$map.set(symKey,mrec);
+      // console.log(`｢ApvMgr⋱get⋱new⋱fin｣ '${key.toString()}'`,mrec.apv);
+    }
+    // console.log(`｢ApvMgr⋱get｣ querying apvMgr.map @ '${key.toString()}'`, mrec.apv);
+    return mrec.apv;
+  }
+  delete(optionsOrKey) {
+    var {key, ...rest} = optionsOrKey?.key ? optionsOrKey : {key:optionsOrKey};
+    var symKey = (typeof(key) == 'symbol') ? key : Symbol.for(key);
+    this.$map.delete(symKey);
+    // console.log(`｢ApvMgr⋱delete｣ '${key.toString()}'`, optionsOrKey);
+  }
+  static #init = (() => {
+    Shell = (μefkt.ApvMgr = this).$default = new this();
+  })();
+}
+
 class Xuid {
-  static #init = (() => {μefkt.Xuid = this})();
   //! Can't use `static const field = const` xbrowser (thus, const's duped)
   static get kAppConfId() { return '{1ebceedd-dfd7-18cd-ddd2-9debe8248a3f}'; }
   static get v1New() { // 🗿 ｢time-based｣
@@ -320,136 +461,7 @@ class Xuid {
       }[sMatch] || sMatch;
     });
   }
-}
-class μPromise extends Promise {
-  state = 'pending';
-  constructor(fnAny, ...a) {
-    const descendentType = new.target;
-    let r, f; super((re, rt) => { r = re, f = rt; }, ...a); this.resolve_ = r, this.reject_ = f;
-    switch (typeof fnAny) {
-      case 'undefined':
-      case 'undefined': break;
-      case 'function': //! `then` will issue a `[native code]` callback on our species; conform!
-        if (fnAny.toString().indexOf('[native code]') >= 0)
-          fnAny(r, f, this, ...a);
-        else
-          fnAny.call(this, this, ...a);
-        break;
-      case 'object':
-        if (fnAny instanceof Date) { this.setTimeout(fnAny, ...a); break; }
-      default:
-        this.resolve(fnAny);
-    }
-  }
-  get settled() { return (this.state !== 'pending' /* i.e., 'fulfilled' */); }
-  get fIsSettled() { return (this.state !== 'pending' /* i.e., 'fulfilled' */); }
-  settle(v,...a) {
-    return (v instanceof Error)
-      ? this.reject(v,...a)
-      : this.resolve(v,...a);
-  }
-  resolve(v, ...a) {
-    if (this.state === 'pending') {
-      //? onPreResolve intercept hook?
-      this.state = 'resolved';
-      this.value = v;
-      // console.log(`μPromise RESOLVING:`,this);
-      if (typeof (this.onSettling) === 'function')
-        this.onSettling(this, ...a);
-      else if (typeof (this.onResolving) === 'function')
-        this.onResolving(this, ...a);
-      this.resolve_(this.value = v, ...a);
-      // if (typeof (this.onResolved) === 'function')
-      //   this.onResolved(this, ...a);
-    }
-    this.cancelTimer();
-    return this.value;
-  }
-  reject(e, ...a) {
-    if (this.state === 'pending') {
-      //? onPreReject intercept hook?
-      this.state = 'rejected';
-      this.value = (e instanceof Error) ? e : μPromise.Error(e, this.name);
-      // console.log(`μPromise REJECTING[${e}]:`,this);
-      if (typeof (this.onSettling) === 'function')
-        this.onSettling(this, ...a);
-      else if (typeof (this.onRejecting) === 'function')
-        this.onRejecting(this, ...a);
-      this.reject_(this.value, ...a);
-      // if (typeof (this.onRejected) === 'function')
-      //   this.onRejected(this, ...a);
-    }
-    this.cancelTimer();
-    return this.value;
-  }
-  setTimeout(nMsFromNowOrDate, value, fIssueReject, ...a) {
-    const deltaInMs = (nMsFromNowOrDate instanceof Date)
-      ? (nMsFromNowOrDate.valueOf() - Date.now()) : nMsFromNowOrDate;
-    return (deltaInMs > 0)
-      ? (this.timerId = setTimeout(() =>
-        this.onTimeout(nMsFromNowOrDate, value, fIssueReject, ...a), deltaInMs))
-      : (fIssueReject
-        ? this.reject(value, nMsFromNowOrDate, ...a)
-        : this.resolve(value, nMsFromNowOrDate, ...a),
-        undefined);
-  }
-  onTimeout(when, value, fIssueReject, ...a) {
-    this.timerId = undefined;
-    return fIssueReject ? this.reject(value, when, ...a) : this.resolve(value, when, ...a);
-  }
-  cancelTimer() { if (this.timerId !== undefined) clearInterval(this.timerId); }
-  static Error(v, name) {
-    var type = (typeof v === 'string') ? v : 'value-rejected';
-    if (name) type = `${name} ${type}`; const e = Error(type); e.value = v;
-    return (e);
-  }
-  static APromise = (() => { const $class = this; return function (...a) { return new $class(...a); }; })();
-};
-class ApvMap extends Map {
-  initNewPromise(mrec) {
-    // mrec supports `{event:{type, once, signal}, once‹unregister-onSettling›}`
-    // ToDo: add support for a watchdog-settlement timer
-    (mrec.apv = new μefkt.APromise()).options = mrec;
-    if(mrec?.once)
-      mrec.apv.onSettling = (...a)=> {
-        // console.log(`｢ApvMap⋱onSettling｣ '${mrec.key.toString()}'`,mrec,...a);
-        this.delete(mrec.symKey)
-      };
-  }
-  get(optionsOrKey) {
-    // options supports `{event:{type, once, signal}, once‹unregister-onSettling›}`
-    var {key, ...rest} = optionsOrKey?.key ? optionsOrKey : {key:optionsOrKey};
-    var symKey = (typeof(key) == 'symbol') ? key : Symbol.for(key), mrec;
-    if(!(mrec = super.get(symKey))) {
-      this.initNewPromise(mrec = {key, symKey, ...rest});
-      if(mrec?.event?.type) { const event = mrec.event;
-        event.target = event.target || μefkt?.Shell;
-        const eventOptions = {
-          once    : mrec.once || event.once,
-          capture : event.capture,
-          passive : event.passive,
-          signal  : event.signal,
-        };
-        event.target.addEventListener(event.type, (e)=> {
-          // console.log(`｢ApvMap⋱get⋱new⋱event⋱fired｣ '${event.type}'`,mrec.apv, e);
-          mrec.apv.settle(e?.detail?.type ? e.detail : e);
-          if(!eventOptions.once)
-            this.initNewPromise(mrec);
-        }, eventOptions);
-        // console.log(`｢ApvMap⋱get⋱new⋱event⋱registered｣ '${key.toString()}'`,mrec.apv);
-      }
-      super.set(symKey,mrec);
-      // console.log(`｢ApvMap⋱get⋱new⋱fin｣ '${key.toString()}'`,mrec.apv);
-    }
-    // console.log(`｢ApvMap⋱get｣ querying apvMap.map @ '${key.toString()}'`, mrec.apv);
-    return mrec.apv;
-  }
-  delete(optionsOrKey) {
-    var {key, ...rest} = optionsOrKey?.key ? optionsOrKey : {key:optionsOrKey};
-    var symKey = (typeof(key) == 'symbol') ? key : Symbol.for(key);
-    super.delete(symKey);
-    // console.log(`｢ApvMap⋱delete｣ '${key.toString()}'`, optionsOrKey);
-  }
+  static #init = (() => {μefkt.Xuid = this})();
 }
 
 class BioPipe extends WebSocket {
@@ -606,6 +618,4 @@ class BioPipe extends WebSocket {
     return btrp_apv;
   }
 }
-μefkt.APromise = μPromise.APromise;
-μefkt.ApvMap   = ApvMap;
 export default μefkt;
