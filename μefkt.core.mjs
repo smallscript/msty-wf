@@ -10,22 +10,23 @@ var fIsNodeJsPolyfillMode = false;
 if (typeof global === 'undefined') {
   // Browser environment
   if (typeof window !== 'undefined')
-    window.global = window;
+    window.μglobal = window;
   else if (typeof self !== 'undefined')
-    self.global = self;
+    self.μglobal = self;
 }
 // globally pollute NodeJs to expose WebSocket, URL etc
 else {
   // NodeJs environment
   fIsNodeJsPolyfillMode = true;
-  global.URL            = (await import('url')).URL;
-  global.WebSocket      = (await import('ws')).WebSocket;
-  global.location       = undefined;
+  global.μglobal        = global;
+  μglobal.URL           = (await import('url')).URL;
+  μglobal.WebSocket     = (await import('ws')).WebSocket;
+  μglobal.location      = undefined;
 }
 var Shell;
 class μefkt {
   static fIsNodeJsPolyfillMode  = fIsNodeJsPolyfillMode;
-  static #fHas_Buffer_from      = global?.Buffer?.from !== undefined;
+  static #fHas_Buffer_from      = μglobal?.Buffer?.from !== undefined;
   static #compose($superclass, mixinTemplateFn) {
     const mixin = mixinTemplateFn($superclass);
     const mxNameDefn = Reflect.getOwnPropertyDescriptor(mixinTemplateFn, 'name');
@@ -186,7 +187,7 @@ class μPromise extends Promise {
   })();
 };
 
-class ApvMgr extends EventTarget {
+class ShellApvMgr extends EventTarget {
   constructor(...a) {super(...a);this.$map = new Map();}
   $initNewPromise(mrec) {
     // mrec supports `{event:{type, once, signal}, once‹unregister-onSettling›}`
@@ -194,7 +195,7 @@ class ApvMgr extends EventTarget {
     (mrec.apv = new μefkt.APromise()).options = mrec;
     if(mrec?.once)
       mrec.apv.onSettling = (...a)=> {
-        // console.log(`｢ApvMgr⋱onSettling｣ '${mrec.key.toString()}'`,mrec,...a);
+        // console.log(`｢ShellApvMgr⋱onSettling｣ '${mrec.key.toString()}'`,mrec,...a);
         this.delete$(mrec.symKey);
       };
   }
@@ -214,24 +215,71 @@ class ApvMgr extends EventTarget {
           signal  : event.signal,
         };
         event.target.addEventListener(event.type, (e)=> {
-          // console.log(`｢ApvMgr⋱get⋱new⋱event⋱fired｣ '${event.type}'`,mrec.apv, e);
+          // console.log(`｢ShellApvMgr⋱get⋱new⋱event⋱fired｣ '${event.type}'`,mrec.apv, e);
           mrec.apv.settle(e?.detail?.type ? e.detail : e);
           if(!eventOptions.once)
             this.$initNewPromise(mrec);
         }, eventOptions);
-        // console.log(`｢ApvMgr⋱get⋱new⋱event⋱registered｣ '${key.toString()}'`,mrec.apv);
+        // console.log(`｢ShellApvMgr⋱get⋱new⋱event⋱registered｣ '${key.toString()}'`,mrec.apv);
       }
       this.$map.set(symKey,mrec);
-      // console.log(`｢ApvMgr⋱get⋱new⋱fin｣ '${key.toString()}'`,mrec.apv);
+      // console.log(`｢ShellApvMgr⋱get⋱new⋱fin｣ '${key.toString()}'`,mrec.apv);
     }
-    // console.log(`｢ApvMgr⋱get｣ querying apvMgr.map @ '${key.toString()}'`, mrec.apv);
+    // console.log(`｢ShellApvMgr⋱get｣ querying apvMgr.map @ '${key.toString()}'`, mrec.apv);
     return mrec.apv;
   }
   delete$(optionsOrKey) {
     var {key, ...rest} = optionsOrKey?.key ? optionsOrKey : {key:optionsOrKey};
     var symKey = (typeof(key) == 'symbol') ? key : Symbol.for(key);
     this.$map.delete(symKey);
-    // console.log(`｢ApvMgr⋱delete｣ '${key.toString()}'`, optionsOrKey);
+    // console.log(`｢ShellApvMgr⋱delete｣ '${key.toString()}'`, optionsOrKey);
+  }
+  getPendingRequestFor$(optionsOrKey) {
+    //🔰 optionsOrKey?.observer{notifyFn, ?options}⋰optionsOrKey?.event?.target
+    var {key, ...rest}    = optionsOrKey?.key ? optionsOrKey : {key:optionsOrKey};
+    var symKey            = (typeof(key) == 'symbol') ? key : Symbol.for(key), mrec;
+    const observer        = rest?.observer;
+    const notifyFn        = observer?.notifyFn;
+    const observerOptions = observer?.options;
+
+    if((mrec = super.get(symKey))) {
+      if(!mrec?.fPendingObserversNotified) {
+        if(observer) // register and then fire
+          this.$addPendingApvRequestObserver(observer, mrec);
+        mrec.fPendingObserversNotified = true;
+        this.$dispatchToPendingApvRequestObservers(mrec);
+      }
+      return mrec;
+    }
+    else if(observer) {
+      mrec = {key, symKey, ...rest}; // register (ONCE/fWasRegistered) and then wait
+      this.$addPendingApvRequestObserver(observer, mrec);
+    }
+    return null;
+  }
+  $addPendingApvRequestObserver(observer, mrec) {
+    if(observer?.fWasRegistered) return;
+    observer.fWasRegistered = true;
+    //🔰 notifyFn can be object with a `handleEvent` fn or must be a fn itself
+    const target    = mrec?.event?.target || this.$defaultTarget,
+          options   = observer?.options || {once: true, passive: true};
+    const eventType = `${mrec?.key}?`;
+    try {
+      target.addEventListener(eventType, observer?.notifyFn, options);
+    } catch(err) {
+      console.warning(`ShellApvMgr trapped error in addEventListener of ${eventType}`, err);
+    }
+  }
+  $dispatchToPendingApvRequestObservers(mrec) {
+    const target    = mrec?.event?.target || this.$defaultTarget;
+    const eventType = `${mrec?.key}?`,
+          event     = new Event(eventType);
+    try {
+      event.detail  = mrec;
+      target.dispatchEvent(event);
+    } catch(err) {
+      console.warning(`ShellApvMgr trapped error in dispatchEvent of ${eventType}`, err);
+    }
   }
   $initEventTargetProxyShell(new_shell) {
     new_shell.apvMgr = this;
@@ -240,6 +288,7 @@ class ApvMgr extends EventTarget {
     new_shell.removeEventListener = (...a)=>this.removeEventListener(...a);
     new_shell.get$ = (...a)=>this.get$(...a);
     new_shell.delete$ = (...a)=>this.delete$(...a);
+    new_shell.getPendingRequestFor$ = (...a)=>this.getPendingRequestFor$(...a);
     return(Shell = μefkt.Shell = new_shell);
   }
   static #init = (() => {
@@ -255,7 +304,7 @@ class ApvMgr extends EventTarget {
         queueMicrotask(()=>this.initThis());
       }
     }
-    Shell = μefkt.Shell = (μefkt.ApvMgr = this).$default = new this();
+    Shell = μefkt.Shell = (μefkt.ShellApvMgr = this).$default = new this();
   })();
 }
 
@@ -349,7 +398,7 @@ class Xuid {
     //@ Return the `date` corresponding to the next period cycle relative
     //@ to startup. Providing a pg-start staggered cycle for fetch actions.
     const dateNowInMs = Date.now(),
-      startNowInMs = (global?.performance?.now) ? performance.now()
+      startNowInMs = (μglobal?.performance?.now) ? performance.now()
         : (dateNowInMs - (this.epochStartMs || (this.epochStartMs = dateNowInMs))),
       deltaInMs = Math.floor(nMsPeriod - (startNowInMs % nMsPeriod));
     return new Date(dateNowInMs + ((deltaInMs < nMsPeriod) ? deltaInMs : 0));
@@ -544,7 +593,7 @@ class BioPipe extends WebSocket {
         status:{code: 4200, msg: 'BioPipe connected to server'}});
     });
     this.addEventListener('message', (msg) => {
-      msg = (global.Buffer && msg instanceof global.Buffer)
+      msg = (μglobal.Buffer && msg instanceof μglobal.Buffer)
         ? μefkt.utf8Decode(msg) : msg?.data;
       if (typeof (msg) === 'string' && msg.length >= 2 && msg[0] === '{') try {
         msg = JSON.parse(msg);
