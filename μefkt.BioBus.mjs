@@ -9,8 +9,6 @@ import μefkt from './μefkt.core.mjs';
 
 μefkt.CoreBioApiMxn = ($superclass,this$mx) => class extends $superclass {
   constructor() { super(); this.pipe = null; }
-  initThis() {
-  }
   connect(...options) {
     const wsOptions = μefkt.BioPipe.prepareWsOptions(...options);
     //👷 see: `onBioPipeChanged`
@@ -42,9 +40,6 @@ import μefkt from './μefkt.core.mjs';
 
 μefkt.EfsBioApiMxn = ($superclass,this$mx) => class extends $superclass {
   constructor() { super();}
-  initThis() {
-    super.initThis();
-  }
   async upsertFile(options) {
     //🔰 assumes `upsertFile().then..` or `await ..`
     const btrq = {

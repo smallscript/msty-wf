@@ -24,17 +24,6 @@ else {
 }
 var Shell;
 class μefkt {
-  static get Shell() {return this?.ApvMgr?.$default;}
-  static set Shell(new_shell) {
-    //👷 convert `μefkt.‹set›Shell` to a one-shot setter so we can intercept the
-    //   `Shell` construction moment and `var` share it properly in this module.
-    Object.defineProperty(this, 'Shell', {
-      value: Shell.$initEventTargetProxyShell(new_shell),
-      writable:false,
-      enumerable:true,
-      configurable:true,
-    });
-  }
   static fIsNodeJsPolyfillMode  = fIsNodeJsPolyfillMode;
   static #fHas_Buffer_from      = global?.Buffer?.from !== undefined;
   static #compose($superclass, mixinTemplateFn) {
@@ -251,10 +240,22 @@ class ApvMgr extends EventTarget {
     new_shell.removeEventListener = (...a)=>this.removeEventListener(...a);
     new_shell.get$ = (...a)=>this.get$(...a);
     new_shell.delete$ = (...a)=>this.delete$(...a);
-    return(Shell = new_shell);
+    return(Shell = μefkt.Shell = new_shell);
   }
   static #init = (() => {
-    Shell = (μefkt.ApvMgr = this).$default = new this();
+    μefkt.ShellBase = class ShellBase {
+      initThis() {}
+      constructor() {
+        Object.defineProperty(μefkt, 'Shell', {
+          value: Shell.$initEventTargetProxyShell(this),
+          writable:false,
+          enumerable:true,
+          configurable:true,
+        });
+        queueMicrotask(()=>this.initThis());
+      }
+    }
+    Shell = μefkt.Shell = (μefkt.ApvMgr = this).$default = new this();
   })();
 }
 

@@ -1,9 +1,8 @@
 import μefkt from './μefkt.core.mjs';
 import './μefkt.BioBus.mjs';
 export default μefkt;
-
 // node client.js
-const BioBusPushMxn = ($superclass,this$mx) => class extends $superclass {
+const BioShellPushMxn = ($superclass,this$mx) => class extends $superclass {
   initThis() {
     super.initThis();
   }
@@ -16,7 +15,7 @@ const BioBusPushMxn = ($superclass,this$mx) => class extends $superclass {
     return this.sendAsyncBioMsg(btrq, μefkt.APromise());
   }
 }
-const BioBusAcctMxn = ($superclass,this$mx) => class extends $superclass {
+const BioShellAcctMxn = ($superclass,this$mx) => class extends $superclass {
   initThis() {
     super.initThis();
   }
@@ -30,13 +29,9 @@ const BioBusAcctMxn = ($superclass,this$mx) => class extends $superclass {
   }
 }
 
-class BioBus extends μefkt.mixin(Object, μefkt.CoreBioApiMxn,
-  μefkt.EfsBioApiMxn, BioBusPushMxn, BioBusAcctMxn)
+class BioShell extends μefkt.mixin(μefkt.ShellBase, μefkt.CoreBioApiMxn,
+  μefkt.EfsBioApiMxn, BioShellPushMxn, BioShellAcctMxn)
 {
-  constructor() { super();
-    //👷 construction-complete; run abia-init-phase
-    (μefkt.Shell = this).initThis();
-  }
   initThis() {
     super.initThis();
     //🚧 extend the API as appropriate to HCTA design ｢acdn-EFS bio-pipe-api exposed-by-default for efs-file-io｣
@@ -65,8 +60,5 @@ class BioBus extends μefkt.mixin(Object, μefkt.CoreBioApiMxn,
     try {btrp = await btrp_apv;} catch(e) {console.log(e);}
     console.log(`FIN example[${btrp?.type}]:`, JSON.stringify(btrp, null, 2));
   }
-  static singleton = (()=>{return(new this());})();
+  static #Shell = new this();
 }
-
-// merge into μefkt
-μefkt.BioBus = BioBus;

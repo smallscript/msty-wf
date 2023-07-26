@@ -19,9 +19,9 @@ else {
 }
 
 //👷 prepare job-run configuration settings
-const Shell         = μefkt.Shell;
-const msty_url      = new URL(client_payload.msty_endpoint);
-const fileList      = [],
+var   {Shell}       = μefkt;
+const msty_url      = new URL(client_payload.msty_endpoint),
+      fileList      = [],
       directoryPath = client_payload?.path || process.cwd();
 const msty_bio_api  = {
   //🔰  MSTY API Suite
