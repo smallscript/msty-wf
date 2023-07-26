@@ -28,9 +28,8 @@ class μefkt {
   static set Shell(new_shell) {
     //👷 convert `μefkt.‹set›Shell` to a one-shot setter so we can intercept the
     //   `Shell` construction moment and `var` share it properly in this module.
-    Shell.$initEventTargetProxyShell(new_shell);
     Object.defineProperty(this, 'Shell', {
-      value: Shell = new_shell,
+      value: Shell.$initEventTargetProxyShell(new_shell),
       writable:false,
       enumerable:true,
       configurable:true,
@@ -252,6 +251,7 @@ class ApvMgr extends EventTarget {
     new_shell.removeEventListener = (...a)=>this.removeEventListener(...a);
     new_shell.get$ = (...a)=>this.get(...a);
     new_shell.delete$ = (...a)=>this.delete(...a);
+    return(Shell = new_shell);
   }
   static #init = (() => {
     Shell = (μefkt.ApvMgr = this).$default = new this();
