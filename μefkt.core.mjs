@@ -28,7 +28,7 @@ class μefkt {
   static set Shell(new_shell) {
     //👷 convert `μefkt.‹set›Shell` to a one-shot setter so we can intercept the
     //   `Shell` construction moment and `var` share it properly in this module.
-    new_shell.apvMgr = this.ApvMgr.$default;
+    Shell.$initEventTargetProxyShell(new_shell);
     Object.defineProperty(this, 'Shell', {
       value: Shell = new_shell,
       writable:false,
@@ -199,6 +199,12 @@ class μPromise extends Promise {
 };
 
 class ApvMgr extends EventTarget {
+  $initEventTargetProxyShell(new_shell) {
+    new_shell.apvMgr = this;
+    new_shell.dispatchEvent = (...a)=>this.dispatchEvent(...a);
+    new_shell.addEventListener = (...a)=>this.addEventListener(...a);
+    new_shell.removeEventListener = (...a)=>this.removeEventListener(...a);
+  }
   constructor(...a) {super(...a);this.$map = new Map();}
   initNewPromise(mrec) {
     // mrec supports `{event:{type, once, signal}, once‹unregister-onSettling›}`

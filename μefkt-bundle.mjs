@@ -44,9 +44,6 @@ class BioBus extends μefkt.mixin(Object, μefkt.CoreBioApiMxn,
     this.addEventListener('/:bio/bioPipeError',      e=>this.onBioPipeError(e));
     this.addEventListener('/:bio/bioPipeClosed',     e=>this.onBioPipeClosedClosed(e));
   }
-  dispatchEvent(...a) {return this.apvMgr.dispatchEvent(...a);}
-  addEventListener(...a) {return this.apvMgr.addEventListener(...a);}
-  removeEventListener(...a) {return this.apvMgr.removeEventListener(...a);}
   async onUpdateAuthRp(e) {
     //🦜 see: `onBioPipeChanged`. This call always follows `onBioPipeChanged`.
     const detail = e?.detail, status = detail?.status;
