@@ -519,7 +519,7 @@ class BioPipe extends WebSocket {
   }
   init_listeners() {
     this.addEventListener('open', () => {
-      this.recvBioMsg({type: '/bio/bioPipeOpen',
+      this.recvBioMsg({type: '/:bio/bioPipeOpen',
         status:{code: 4200, msg: 'BioPipe connected to server'}});
     });
     this.addEventListener('message', (msg) => {
@@ -543,12 +543,12 @@ class BioPipe extends WebSocket {
           console.error(e);
         }
       }
-      this.recvBioMsg({type: '/bio/bioPipeClosed', status:{code, msg: msg.toString()}});
+      this.recvBioMsg({type: '/:bio/bioPipeClosed', status:{code, msg: msg.toString()}});
       // console.log(`BioPipe connection closed ${code} ${msg}`);
     });
     this.addEventListener('error', (error) => {
       // console.error('BioPipe WebSocket error:', error);
-      this.recvBioMsg({type: '/bio/bioPipeError', status:{code: 1011, msg: 'Unexpected condition', detail: error}});
+      this.recvBioMsg({type: '/:bio/bioPipeError', status:{code: 1011, msg: 'Unexpected condition', detail: error}});
     });
   }
   dispatchBioMsg(type, detail) {
@@ -575,7 +575,7 @@ class BioPipe extends WebSocket {
           btrp_apv.resolve(msg);
       }
     }
-    this.dispatchBioMsg(msg?.type || '/bio/undefined', msg);
+    this.dispatchBioMsg(msg?.type || '/:bio/undefined', msg);
   }
   async ensureOpenBioPipe() {
     //🚧 given this.wsOptions, we can re-open a closed pipe on demand. When

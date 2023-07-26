@@ -63,7 +63,7 @@ const msty_bio_api  = {
   },
   submitYaml(fse) {
     const btrq = {...fse,
-      type: '/msty.sm.st/submitYaml',
+      type: '/:msty.sm.st/submitYaml',
     }
     return this.sendAsyncBioMsg(btrq); //, μefkt.APromise());
   },
@@ -73,7 +73,7 @@ const msty_bio_api  = {
   },
   sendSubmitYamlFinished(fse) {
     const btrq = {...fse,
-      type: '/msty.sm.st/submitYaml/finished',
+      type: '/:msty.sm.st/submitYaml/finished',
     }
     return this.sendAsyncBioMsg(btrq); //, μefkt.APromise());
   },
@@ -87,14 +87,14 @@ if(μefkt.fIsNodeJsPolyfillMode) {
 
   // const bio_endpoint_open = Shell.apvMap.get({
   //   key:Symbol(`bio_endpoint_open`), once: true,
-  //   event: {type: `/bio/bioPipeOpen`}});
+  //   event: {type: `/:bio/bioPipeOpen`}});
   const bio_auth_received$ = Shell.apvMap.get({
     key:Symbol(`bio_auth_received`), once: true,
-    event: {type: `/bio/acdn/updateAuthRp`}});
-  Shell.addEventListener('/msty.sm.st/submitYaml/reply', Shell.onSubmitYamlReply, {passive:true});
+    event: {type: `/:bio/acdn/updateAuthRp`}});
+  Shell.addEventListener('/:msty.sm.st/submitYaml/reply', Shell.onSubmitYamlReply, {passive:true});
   const bio_pipe_closed$ = Shell.apvMap.get({
     key:Symbol(`bio_pipe_closed`), once: true,
-    event: {type: `/bio/bioPipeClosed`}});
+    event: {type: `/:bio/bioPipeClosed`}});
 
   // 👷 await pipe-established with auth-approval
   Shell.connect(bio_endpoint);
@@ -106,5 +106,5 @@ if(μefkt.fIsNodeJsPolyfillMode) {
   Shell.sendSubmitYamlFinished();  // await results OR just close
   const bio_close = await bio_pipe_closed$;
   console.log(`on[${bio_close?.type}]:`, JSON.stringify(bio_close, null, 2));
-  // Shell.removeEventListener('/msty.sm.st/ackYaml', Shell.onAckYaml, {passive:true});
+  // Shell.removeEventListener('/:msty.sm.st/ackYaml', Shell.onAckYaml, {passive:true});
 }

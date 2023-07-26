@@ -49,7 +49,7 @@ import μefkt from './μefkt.core.mjs';
     //🔰 assumes `upsertFile().then..` or `await ..`
     const btrq = {
       ...options,
-      type: '/bio/acdn/upsertFile',
+      type: '/:bio/acdn/upsertFile',
     }
     return this.sendAsyncBioMsg(btrq, μefkt.APromise());
   }
@@ -57,7 +57,7 @@ import μefkt from './μefkt.core.mjs';
     //🔰 assumes `deleteFile().then..` or `await ..`
     const btrq = {
       ...options,
-      type: '/bio/acdn/deleteFile',
+      type: '/:bio/acdn/deleteFile',
     }
     return this.sendAsyncBioMsg(btrq, μefkt.APromise());
   }
@@ -65,7 +65,7 @@ import μefkt from './μefkt.core.mjs';
     //🔰 assumes `renameFile().then..` or `await ..`
     const btrq = {
       ...options,
-      type: '/bio/acdn/renameFile',
+      type: '/:bio/acdn/renameFile',
     }
     return this.sendAsyncBioMsg(btrq, μefkt.APromise());
   }
@@ -73,7 +73,7 @@ import μefkt from './μefkt.core.mjs';
     //🔰 assumes `getFiles().then..` or `await ..`
     const btrq = {
       ...options,
-      type: '/bio/acdn/getFiles',
+      type: '/:bio/acdn/getFiles',
     }
     return this.sendAsyncBioMsg(btrq, μefkt.APromise());
   }

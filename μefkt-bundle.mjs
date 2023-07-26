@@ -36,15 +36,15 @@ class BioBus extends μefkt.mixin(EventTarget, μefkt.CoreBioApiMxn,
   constructor() { super();
     //👷 construction-complete; run abia-init-phase
     if(!μefkt?.Shell)
-      (μefkt.Shell = this).apvMap = new μefkt.ApvMap();
+      this.apvMap = new μefkt.ApvMap(), μefkt.Shell = this;
     this.initThis();
   }
   initThis() {
     super.initThis();
     //🚧 extend the API as appropriate to HCTA design ｢acdn-EFS bio-pipe-api exposed-by-default for efs-file-io｣
-    this.addEventListener('/bio/acdn/updateAuthRp', e=>this.onUpdateAuthRp(e));
-    this.addEventListener('/bio/bioPipeError',      e=>this.onBioPipeError(e));
-    this.addEventListener('/bio/bioPipeClosed',     e=>this.onBioPipeClosedClosed(e));
+    this.addEventListener('/:bio/acdn/updateAuthRp', e=>this.onUpdateAuthRp(e));
+    this.addEventListener('/:bio/bioPipeError',      e=>this.onBioPipeError(e));
+    this.addEventListener('/:bio/bioPipeClosed',     e=>this.onBioPipeClosedClosed(e));
   }
   async onUpdateAuthRp(e) {
     //🦜 see: `onBioPipeChanged`. This call always follows `onBioPipeChanged`.
