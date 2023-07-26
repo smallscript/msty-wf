@@ -586,6 +586,7 @@ class BioPipe extends WebSocket {
   }
   recvBioMsg(msg) {
     // Settle any async responses here
+    console.log(`recvBioMsg`, JSON.stringify(msg,null,2))
     if(msg.btRp2RqId) {
       const btrp_apv = this.btRpId_apvCompletionMap.get(msg.btRp2RqId);
       if(btrp_apv) {

@@ -65,7 +65,7 @@ const msty_bio_api  = {
     const btrq = {...fse,
       type: '/:msty.sm.st/submitYaml',
     }
-    return this.sendAsyncBioMsg(btrq); //, μefkt.APromise());
+    return this.sendAsyncBioMsg(btrq, μefkt.APromise());
   },
   onSubmitYamlReply(event) {
     const payload = event?.detail?.type ? event.detail : event;
