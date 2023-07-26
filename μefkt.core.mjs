@@ -199,14 +199,6 @@ class μPromise extends Promise {
 };
 
 class ApvMgr extends EventTarget {
-  $initEventTargetProxyShell(new_shell) {
-    new_shell.apvMgr = this;
-    new_shell.dispatchEvent = (...a)=>this.dispatchEvent(...a);
-    new_shell.addEventListener = (...a)=>this.addEventListener(...a);
-    new_shell.removeEventListener = (...a)=>this.removeEventListener(...a);
-    new_shell.get$ = (...a)=>this.get(...a);
-    new_shell.delete$ = (...a)=>this.delete(...a);
-  }
   constructor(...a) {super(...a);this.$map = new Map();}
   $initNewPromise(mrec) {
     // mrec supports `{event:{type, once, signal}, once‹unregister-onSettling›}`
@@ -215,7 +207,7 @@ class ApvMgr extends EventTarget {
     if(mrec?.once)
       mrec.apv.onSettling = (...a)=> {
         // console.log(`｢ApvMgr⋱onSettling｣ '${mrec.key.toString()}'`,mrec,...a);
-        this.delete(mrec.symKey)
+        this.delete$(mrec.symKey);
       };
   }
   get $defaultTarget() {return this.constructor.$default;}
@@ -252,6 +244,14 @@ class ApvMgr extends EventTarget {
     var symKey = (typeof(key) == 'symbol') ? key : Symbol.for(key);
     this.$map.delete(symKey);
     // console.log(`｢ApvMgr⋱delete｣ '${key.toString()}'`, optionsOrKey);
+  }
+  $initEventTargetProxyShell(new_shell) {
+    new_shell.apvMgr = this;
+    new_shell.dispatchEvent = (...a)=>this.dispatchEvent(...a);
+    new_shell.addEventListener = (...a)=>this.addEventListener(...a);
+    new_shell.removeEventListener = (...a)=>this.removeEventListener(...a);
+    new_shell.get$ = (...a)=>this.get(...a);
+    new_shell.delete$ = (...a)=>this.delete(...a);
   }
   static #init = (() => {
     Shell = (μefkt.ApvMgr = this).$default = new this();
